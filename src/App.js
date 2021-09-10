@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 // import ClassCounter from "./components/ClassCounter";
 // import Counter from "./components/Counter";
 import PostList from "./components/PostList";
@@ -11,6 +11,11 @@ import PostForm from "./components/UI/PostForm";
 import PostFilter from "./components/PostFilter";
 import MyModal from "./components/UI/select/MyModal";
 import MyButton from "./components/UI/button/MyButton";
+import axios from "axios";
+import PostService from "./API/PostService";
+import Loader from "./components/UI/Loading/Loader";
+import { useFetching } from "./hooks/useFetching";
+
 function App() {
   const [posts, setPosts] = useState([
     {id: 1, title: "Phython", body: "Description 1"},
@@ -24,9 +29,14 @@ function App() {
 const [filter, setFilter] = useState({sort:'', query: ''});
 const [modal, setModal] = useState(false);
 
+const [fetchPosts, isPostLoading, posterror] = useFetching(() => {
+  const posts = await PostService.getAll();
+  setPosts(posts);
+
+})
+
 
 const sortedPosts = useMemo(() => {
-  console.log('aaaaa');
   if (filter.sort) {
     return [...posts].sort((a, b) => a[filter.sort].localeCompare(b[filter.sort]));
   }
@@ -38,9 +48,17 @@ const sortedAndSearchedPosts = useMemo(() => {
 
 }, [filter.query, sortedPosts]);
 
+useEffect(() => {
+  fetchPosts();
+
+}, [filter]);
+
+
 const createPost = (newPost) => {
   setPosts([...posts, newPost]);
 }
+
+
 
 const removePost = (post) => {
   setPosts(posts.filter(p => p.id !== post.id));
@@ -53,6 +71,7 @@ const removePost = (post) => {
   return (
     
     <div className="App">
+      <button onClick={fetchPosts}>Get Posts</button>
       <MyButton onClick={() => setModal(true)} >Add new task</MyButton>
       <MyModal visible={modal} setVisible={setModal}> 
       <PostForm create={createPost}/>
@@ -63,7 +82,10 @@ const removePost = (post) => {
       <PostFilter
       filter={filter}
       setFilter={setFilter}/>
-      <PostList remove={removePost} posts={sortedAndSearchedPosts} title='Post list one'/> 
+      {isPostLoading
+        ? <div style={{display: "flex", justifyContent: "center", marginTop: 50}}><Loader/></div>
+        : <PostList remove={removePost} posts={sortedAndSearchedPosts} title='Post list one'/>
+      }     
     </div>
   );
 }
